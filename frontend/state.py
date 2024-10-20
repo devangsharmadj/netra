@@ -2,10 +2,78 @@ import asyncio
 import json
 import os
 import uuid
+import time
 
 import httpx
 import reflex as rx
 from openai import AsyncOpenAI
+import google.generativeai as genai
+
+import json
+
+
+# def gemini_starter():
+    
+
+GEMINI_API_KEY = 'AIzaSyBjWprVJ6UMCQXHE4GnO7OapYn1r_0ejak' 
+genai.configure(api_key=GEMINI_API_KEY)
+
+def upload_to_gemini(path, mime_type=None):
+    """Uploads the given file to Gemini."""
+    file = genai.upload_file(path, mime_type=mime_type)
+    print(f"Uploaded file '{file.display_name}' as: {file.uri}")
+    return file
+
+def wait_for_files_active(files):
+    """Waits for the given files to be active."""
+    print("Waiting for file processing...")
+    for name in (file.name for file in files):
+        file = genai.get_file(name)
+        while file.state.name == "PROCESSING":
+            print(".", end="", flush=True)
+            time.sleep(10)
+            file = genai.get_file(name)
+        if file.state.name != "ACTIVE":
+            raise Exception(f"File {file.name} failed to process")
+    print("...all files ready")
+    print()
+
+# Create the model
+generation_config = {
+    "temperature": 1,
+    "top_p": 0.95,
+    "top_k": 40,
+    "max_output_tokens": 8192,
+    "response_mime_type": "application/json",
+}
+
+model = genai.GenerativeModel(
+    model_name="gemini-1.5-pro-002",
+    generation_config=generation_config,
+)
+
+# Upload your video file
+files = [
+    upload_to_gemini(r"./assets/calhacks.mp4", mime_type="video/mp4"),
+]
+
+# Wait for the files to be processed
+wait_for_files_active(files)
+
+
+
+chat_session = model.start_chat(
+    history=[
+        {
+            "role": "user",
+            "parts": [
+                files[0],
+            ],
+        },
+    ]
+)
+
+
 
 class SettingsState(rx.State):
     # The accent color for the app
@@ -52,21 +120,30 @@ class State(rx.State):
         yield
 
         
-        client = httpx.AsyncClient()
+        # This is where I am calling the gemini api
+        prompt = f"{question}. Give the response with the key being 'details'. Please give the response in a paragraph format. Only provide it in a detailed response. Provide a detailed and descriptive explanation in natural language."
 
-        # call the agentic workflow
-        input_payload = {
-            "chat_history_dicts": chat_history_dicts,
-            "user_input": question,
-        }
-        deployment_name = os.environ.get("DEPLOYMENT_NAME", "MyDeployment")
-        apiserver_url = os.environ.get("APISERVER_URL", "http://localhost:4501")
-        response = await client.post(
-            f"{apiserver_url}/deployments/{deployment_name}/tasks/create",
-            json={"input": json.dumps(input_payload)},
-            timeout=60,
-        )
-        answer = response.text
+# Send the modified prompt to the model
+        response = chat_session.send_message(prompt)
+
+        # client = httpx.AsyncClient()
+
+        # # call the agentic workflow
+        # input_payload = {
+        #     "chat_history_dicts": chat_history_dicts,
+        #     "user_input": question,
+        # }
+        # deployment_name = os.environ.get("DEPLOYMENT_NAME", "MyDeployment")
+        # apiserver_url = os.environ.get("APISERVER_URL", "http://localhost:4501")
+        # response = await client.post(
+        #     f"{apiserver_url}/deployments/{deployment_name}/tasks/create",
+        #     json={"input": json.dumps(input_payload)},
+        #     timeout=60,
+        # )
+        response_text = response.text
+        response_data = json.loads(response_text)
+        details = response_data.get('details')
+        answer = details
 
         for i in range(len(answer)):
             # Pause to show the streaming effect.
@@ -83,13 +160,13 @@ class State(rx.State):
         answer = ""
         yield
 
-        async for item in session:
-            if hasattr(item.choices[0].delta, "content"):
-                if item.choices[0].delta.content is None:
-                    break
-                answer += item.choices[0].delta.content
-                self.chat_history[-1] = (self.chat_history[-1][0], answer)
-                yield
+        # async for item in session:
+        #     if hasattr(item.choices[0].delta, "content"):
+        #         if item.choices[0].delta.content is None:
+        #             break
+        #         answer += item.choices[0].delta.content
+        #         self.chat_history[-1] = (self.chat_history[-1][0], answer)
+        #         yield
 
         # Ensure the final answer is added to chat history
         if answer:
@@ -108,3 +185,4 @@ class State(rx.State):
         # Reset the chat history and processing state
         self.chat_history = []
         self.processing = False
+

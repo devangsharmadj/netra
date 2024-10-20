@@ -15,37 +15,39 @@ def template_card(icon: str, title: str, description: str, color: str) -> rx.Com
 def templates() -> rx.Component:
     return rx.box(
         rx.image(
-            src="/reflex_x_llamaindex.svg",
+            src="/logo.svg",
             class_name="opacity-70 w-auto h-11 pointer-events-none",
         ),
         rx.box(
             template_card(
-                "message-circle",
-                "Ask a question",
-                "What is the capital of France?",
+                "align-center",
+                "Get event summaries",
+                "What happened between 2pm and 3pm today?",
                 "grass",
             ),
             template_card(
-                "calculator",
-                "Solve a math problem",
-                "What is the square root of 144?",
+                "package-search",
+                "Package delivery information",
+                "When did I receive a package?",
                 "tomato",
             ),
             template_card(
-                "globe",
-                "Get a fun fact",
-                "Tell me an interesting fact about dolphins.",
+                "shield-check",
+                "Know about intruders",
+                "Give me the timestamp where there was an intruder",
                 "blue",
             ),
+
             template_card(
-                "book",
-                "Recommend a book",
-                "What's a good mystery novel for beginners?",
-                "amber",
+                "search",
+                "Query the database in seconds",
+                "How many red cars passed?",
+                "purple",
             ),
-            class_name="gap-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 w-full",
+    
+            class_name="gap-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4",
         ),
-        class_name="top-1/3 left-1/2 absolute flex flex-col justify-center items-center gap-10 w-full max-w-4xl transform -translate-x-1/2 -translate-y-1/2 px-6 z-50",
+        class_name="flex flex-col justify-center items-center gap-10 w-full max-w-4xl px-6 z-50",
         style={
             "animation": "reveal 0.35s ease-out",
             "@keyframes reveal": {"0%": {"opacity": "0"}, "100%": {"opacity": "1"}},
